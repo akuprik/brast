@@ -1,3 +1,4 @@
+import os
 import re
 
 from telebot import TeleBot
@@ -16,6 +17,7 @@ TEMPLATE_ID = '(\d*)'
 TEMPLATE_VALID = '/(VALID|UNVALID) (\d*)'
 TEMPLATE_FILTER = '/FILTER A:(\w*) T:(.*)'
 TEMPLATE_UNFILTER = '/UNFILTER (\d*)'
+TEMPLATE_COMMAND ='/(\w*)'
 
 
 log = logs.Logger(log_name='b_telega', log_level=LOG_LEVEL)
@@ -242,9 +244,9 @@ class TBot(TeleBot):
         Добавляет фильтр
         """
         try:
-            print(TEMPLATE_FILTER)
-            print(message.text.upper())
-            print(re.findall(TEMPLATE_FILTER, message.text.upper()))
+            #print(TEMPLATE_FILTER)
+            #print(message.text.upper())
+            #print(re.findall(TEMPLATE_FILTER, message.text.upper()))
             filter_address, filter_text = re.findall(TEMPLATE_FILTER,
                                                      message.text.upper(),
                                                      )[0]
@@ -266,8 +268,8 @@ class TBot(TeleBot):
 
     def handler_unfilter(self, message):
         try:
-            print(TEMPLATE_UNFILTER)
-            print(message.text.upper())
+            #print(TEMPLATE_UNFILTER)
+            #print(message.text.upper())
             filter_id = re.findall(TEMPLATE_UNFILTER, message.text.upper())[0]
         except:
             return 'Не верный формат\nПопробуй /help'
@@ -281,3 +283,14 @@ class TBot(TeleBot):
                     f"Для просмотра списка фильтров /filterlist"
                 )
         return 'Не верный ID'
+
+    def handler_details(self, message):
+        file = f"./details/{re.findall(TEMPLATE_COMMAND, message.text)[0]}.txt"
+        if os.path.exists(file):
+            f = open(file, 'r')
+            msg = f.read()
+            f.close()
+        else:
+            msg = 'Информация пока не подготовлена'
+            log.warning(f"handler_details: файл не найден {file}")
+        return msg

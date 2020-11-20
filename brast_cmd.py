@@ -74,6 +74,13 @@ def h_filter(message):
     msg = bot.handler_unfilter(message)
     bot.send_message(message.chat.id, msg)
 
+@bot.message_handler(commands=['details',
+                               'filters',
+                               'registrations',
+                               ])
+def h_details_all(message):
+    msg = bot.handler_details(message)
+    bot.send_message(message.chat.id, msg)
 
 @bot.message_handler()
 def h_all(message):
