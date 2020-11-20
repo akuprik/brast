@@ -54,3 +54,19 @@ class Filter:
                 f' a:{self.filter_address} /'
                 f' t:{self.filter_text}'
                 )
+
+class Tlg:
+    def __init__(self, tlg : dict):
+        self.tlg_id = tlg.get('ID_TLG')
+        self.time = tlg.get('RecTime')
+        self.priority = tlg.get('PrCode')
+        self.dst_addr = tlg.get('DstAddrStr')
+        self.snd_num = tlg.get('SndNum')
+        self.snd_addr = tlg.get('SndAddr')
+        self.text = tlg.get('Txt').replace('###', '\n')
+
+    def __str__(self):
+        return (f"id:{self.tlg_id} time:{self.time}\n"
+                f"{self.priority} {self.dst_addr}\n"
+                f"{self.snd_num} {self.snd_addr}\n"
+                f"{self.text}")

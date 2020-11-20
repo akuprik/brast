@@ -129,7 +129,7 @@ class CktsBotDB:
                          f"where client_id ={client.client_id}")
         ms = MyRecordSet(self.cur.fetchall(), self.cur.description)
         for row in ms._rows:
-            print(row)
+            #print(row)
             reg_list += [b_client.ClientPult(row[0], row[1], row[2], row[3])]
         return reg_list
 
@@ -346,3 +346,4 @@ class CktsBotDB:
             return client
         return self.create_edit_client(b_client.TelegaClient(0, 2,
                                                                 telega_id))
+

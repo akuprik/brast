@@ -13,6 +13,7 @@ pyvenv.cfg
 .DS_Store
 .AppleDouble
 .LSOverride
+logs/
 
 *.sublime-project
 *.sublime-workspace

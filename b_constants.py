@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 
 import logs
 
-log_level = logs.DEBUG  # уровень логов для данного модуля
+log_level = logs.WARNING  # уровень логов для данного модуля
 log = logs.Logger(log_name='b_constants', log_level=log_level)
 
 try:
