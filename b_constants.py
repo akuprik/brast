@@ -18,3 +18,6 @@ try:
     )
 except Exception as e:
     log.error(f"Ошибка загрузки констант \n{str(e)}")
+
+TIMEOUT_DISPATH = 5  # c, перерыв между получением телеграм от сервера
+TIMEUOT_SLEEP = 120  # c, перерыв в отправках после отправления всех

@@ -5,12 +5,13 @@ from ckts_api import get_tlgs
 from b_client import Tlg
 from b_db import CktsBotDB
 from b_telega import TBot
-from b_constants import TELEGA_TOKEN
+from b_constants import TELEGA_TOKEN, TIMEOUT_DISPATH, TIMEUOT_SLEEP
+from time import sleep
 
 
-def main():
-    db = CktsBotDB()
-    bot = TBot(TELEGA_TOKEN)
+
+def dispatch_tlg(db, bot):
+    flag = False
     clients = db.get_clients()
     for client in clients:
         regs = db.get_register_list(client)
@@ -34,8 +35,18 @@ def main():
             for item in result.values():
                 tlg = Tlg(item)
                 bot.send_message(client.telega_id, str(tlg))
-                print(tlg)
+                flag = True
+        return flag
 
+
+def main():
+    db = CktsBotDB()
+    bot = TBot(TELEGA_TOKEN)
+    while True:
+        if dispatch_tlg(db, bot):
+            sleep(TIMEOUT_DISPATH)
+        else:
+            sleep(TIMEUOT_SLEEP)
 
 
 

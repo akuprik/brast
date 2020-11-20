@@ -42,7 +42,7 @@ def get_tlgs(telegaid, telegafio, pults: list, filters: list):
             'telegafio': telegafio,
             'filters': ','.join(filters),
             }
-    print(data)
+    #print(data)
     headers = {'content-type': 'application/x-www-form-urlencoded'}
     result = request(method='post',
                      url=f'{API_PATH}gettlg.asp',

@@ -9,7 +9,7 @@ from ckts_api import test_pult_in_cks
 from b_client import Filter
 
 POLLING_INTERVAL = 1
-LOG_LEVEL = logs.DEBUG
+LOG_LEVEL = logs.WARNING
 
 TEMPLATE_PULT = '(TLG\d{3})'
 TEMPLATE_ID = '(\d*)'
