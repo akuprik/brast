@@ -1,28 +1,34 @@
+import datetime
 
 class TelegaClient:
-    def __init__(self, id, client_type, telega_id, client_type_nic=None):
+    def __init__(self, id, client_type,
+                 telega_id, client_type_nic=None,
+                 lastdate=None, sent_info=0):
         self.client_id = id
         self.client_type = client_type if client_type else 2
         self.telega_id = str(telega_id)
         self.client_type_nic = client_type_nic
+        self.lastdate = (lastdate
+                         if lastdate is not None
+                         else str(datetime.date.today()))
+
+        self.sent_info = sent_info
 
     def __str__(self):
         return (f'id:{self.client_id} '
                 f'role:{self.client_type_nic} '
-                f't_id:{self.telega_id}'
-                )
+                f't_id:{self.telega_id} '
+                f'ld:{self.lastdate} '
+                f'si:{self.sent_info}')
 
 
 class ClientPult:
-    def __init__(self, id, client_id, pult, valid,
-                 telega_id=None, valid_date=None, sent_confirm=None):
+    def __init__(self, id, client_id, pult, valid, telega_id=None):
         self.id = id if id else 0
         self.client_id = client_id
         self.pult = pult
         self.valid = valid
         self.telega_id = telega_id
-        self.valid_date = valid_date
-        self.sent_confirm = sent_confirm
 
     def valid_str(self):
         if self.valid != 0:
@@ -34,7 +40,6 @@ class ClientPult:
 
     def str_for_admin(self):
         return (f'{self.pult} {self.valid_str()} '
-                f'{self.valid_date} {self.sent_confirm}'
                 )
 
     def __str__(self):

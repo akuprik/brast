@@ -7,7 +7,9 @@ import logs
 from MyRecordSet import MyRecordSet
 import b_client
 
-log = logs.Logger(log_name='b_db')
+log_level = logs.DEBUG
+
+log = logs.Logger(log_name='b_db', log_level=log_level)
 
 DB_FILE_NAME = 'ckts_bot_db'
 
@@ -18,51 +20,57 @@ class CktsBotDB:
         self.cur = self.con.cursor()
 
     def get_telega_client(self, telega_id):
-        self.cur.execute(f"select * from clients "
+        self.cur.execute(f"select * from v_clients "
                          f"where telega_id = '{telega_id}'")
         ms = MyRecordSet(self.cur.fetchall(), self.cur.description)
         if len(ms._rows) > 0:
-            return b_client.TelegaClient(ms._rows[0][0], ms._rows[0][1],
-                                            ms._rows[0][2])
+            return b_client.TelegaClient(ms._rows[0][0],
+                                         ms._rows[0][1],
+                                         ms._rows[0][2],
+                                         ms._rows[0][3],
+                                         ms._rows[0][4],
+                                         ms._rows[0][5],
+                                         )
         return None
 
     def create_edit_client(self, aclient):
         self.cur.execute('select * from clients where id_client = ?',
                          [aclient.client_id])
         ms = MyRecordSet(self.cur.fetchall(), self.cur.description)
-        print()
         if len(ms._rows) > 0:
             try:
                 self.cur.execute(
                     f"update clients set client_type={aclient.client_type}, "
-                    f"telega_id='{aclient.telega_id}'"
+                    f"telega_id='{aclient.telega_id}', "
+                    f"last_date='{aclient.lastdate}',"
+                    f"sent_inform={aclient.sent_info}"
                     f'where id_client = {aclient.client_id}',
                     )
             except Exception as e:
                 se = sys.exc_info()
                 log.error(
                     f'Ошибка при изменении клиента в БД \n '
-                    f'client_id = {aclient.client_id} \n'
-                    f'client_type = {aclient.client_type} \n'
-                    f'telega_id = {aclient.telega_id} \n'
+                    f'{str(aclient)} \n'
                     f'{se[1]}\n{se[2].tb_frame.f_code}'
                     )
                 return None
             return aclient
         else:
             try:
-                self.cur.execute(f"insert into clients (client_type, telega_id)"
+                self.cur.execute(f"insert into clients "
+                                 f"(client_type, telega_id, "
+                                 f"lastdate, sent_inform) "
                                  f"values ({aclient.client_type},"
-                                 f" '{aclient.telega_id}')"
+                                 f" '{aclient.telega_id}', "
+                                 f"'{aclient.lastdate}',"
+                                 f"{aclient.sent_info})"
                                  )
                 self.con.commit()
             except Exception as e:
                 se = sys.exc_info()
                 log.error(
                     f'Ошибка при создании клиента в БД \n '
-                    f'client_id = {aclient.client_id} \n'
-                    f'client_type = {aclient.client_type} \n'
-                    f'telega_id = {aclient.telega_id} \n'
+                    f'{aclient} \n'
                     f'{se[1]}\n{se[2].tb_frame.f_code}'
                     )
                 return None
@@ -82,9 +90,9 @@ class CktsBotDB:
         # Создает новую пару
         try:
             self.cur.execute(f"insert into client_pult "
-                             f"(client_id, pult, valid_date, sent_confirm) "
+                             f"(client_id, pult) "
                              f"values ({client.client_id}, "
-                             f"'{pult}', '{datetime.datetime.now()}', null)"
+                             f"'{pult}')"
                              )
             self.con.commit()
         except Exception as e:
@@ -103,7 +111,9 @@ class CktsBotDB:
         ms = MyRecordSet(self.cur.fetchall(), self.cur.description)
         if len(ms._rows) > 0:
                  return b_client.ClientPult(ms._rows[0][0], ms._rows[0][1],
-                                               ms._rows[0][2], ms._rows[0][3])
+                                            ms._rows[0][2], ms._rows[0][3],
+                                            ms._rows[0][4],
+                                            )
         return None
 
     def unregister_pult(self, client, pult):
@@ -130,23 +140,27 @@ class CktsBotDB:
         ms = MyRecordSet(self.cur.fetchall(), self.cur.description)
         for row in ms._rows:
             #print(row)
-            reg_list += [b_client.ClientPult(row[0], row[1], row[2], row[3])]
+            reg_list += [b_client.ClientPult(row[0], row[1], row[2],
+                                             row[3], row[4])]
         return reg_list
 
     def get_admins(self):
         admin_list = []
-        self.cur.execute(f"select * from clients where client_type = 1")
+        self.cur.execute(f"select * from v_clients where client_type = 1")
         ms = MyRecordSet(self.cur.fetchall(), self.cur.description)
         for row in ms._rows:
-            admin_list += [b_client.TelegaClient(row[0], row[1], row[2])]
+            admin_list += [b_client.TelegaClient(row[0], row[1],
+                                                 row[2], row[3],
+                                                 row[4], row[5],
+                                                 )]
         return admin_list
 
     def get_regs_not_valid(self):
         reg_list = []
         self.cur.execute(f"select id, client_id, pult, "
-                         f"valid, telega_id from client_pult "
-                         f" inner join clients "
-                         f" on client_id=id_client where valid = 0")
+                         f"valid, telega_id  "
+                         f"from v_client_pult "
+                         f"where valid = 0")
         ms = MyRecordSet(self.cur.fetchall(), self.cur.description)
         for row in ms._rows:
             reg_list += [b_client.ClientPult(row[0], row[1], row[2],
@@ -178,9 +192,7 @@ class CktsBotDB:
     def set_valid_reg(self, reg_id, valid=True):
         try:
             self.cur.execute(f"update client_pult "
-                             f" set valid = {1 if valid else 0}, "
-                             f" valid_date = '{datetime.datetime.today()}', "
-                             f" sent_confirm = 0 "
+                             f" set valid = {1 if valid else 0} "
                              f" where id = {reg_id} "
                              )
             self.con.commit()
@@ -206,7 +218,9 @@ class CktsBotDB:
                         row[1],
                         row[2],
                         row[3],
-                        )
+                        row[4],
+                        row[5],
+                    )
                     ]
         return clients
 
@@ -225,13 +239,14 @@ class CktsBotDB:
                 self.cur.execute(
                     f"update pults "
                     f"set pult_addr = '{pult_description.get('pult')}', "
-                    f"pult_descr = '{pult_description.get('client_name')}'"
+                    f"pult_descr = '{pult_description.get('client_name')}' "
+                    f"where pult_id = {pult_description.get('id_client')}"
                     )
                 self.con.commit()
             else:
                 se = sys.exc_info()
                 log.error(
-                    f"Ошибка при сохзранении данных о пульте "
+                    f"Ошибка при сохранении данных о пульте "
                     f"{pult_description.get('pult')} \n "
                     f"{pult_description} \n"
                     f'{se[1]}\n{se[2].tb_frame.f_code}\n'
@@ -347,3 +362,76 @@ class CktsBotDB:
         return self.create_edit_client(b_client.TelegaClient(0, 2,
                                                                 telega_id))
 
+    def confirm_client(self, client):
+        """
+        Подтверждает рабочее состяние клиента
+        """
+        log.debug(f'confirm_client: телега клиент {client}')
+        sql_str = str(
+                f"update clients "
+                f"set lastdate = '{datetime.date.today()}',"
+                f"sent_inform = 0 "
+                f"where telega_id = {client}"
+                )
+        try:
+            self.cur.execute(sql_str)
+            self.con.commit()
+        except Exception as e:
+            log.error(f'confirm_client: Ошибка сброса даты клиента {client}\n'
+                      f'{sql_str}\n'
+                      f'{str(e)}\n'
+                      f'{sys.exc_info()[2].tb_frame.f_code}')
+
+    def delete_client(self, client):
+        """
+        удаляет из БД клиента, его регистрации и фильтры
+        """
+        result = True
+        log.warning(f"delete_client: {client}")
+        sql_str = str(
+                f"delete from clients "
+                f"where id_client = {client}"
+                )
+        try:
+            log.debug(f"delete_client: удаление из таблицы clients")
+            self.cur.execute(sql_str)
+        except Exception as e:
+            self.con.rollback()
+            result = False
+            log.error(f'delete_client:: Ошибка удаления из clients \n{client}\n'
+                      f'{sql_str}\n'
+                      f'{str(e)}\n'
+                      f'{sys.exc_info()[2].tb_frame.f_code}')
+
+        sql_str = str(
+                f"delete from client_pult "
+                f"where client_id = {client}"
+                )
+        try:
+            log.debug(f"delete_client: удаление из таблицы client_pult")
+            self.cur.execute(sql_str)
+        except Exception as e:
+            result = False
+            self.con.rollback()
+            log.error(f'delete_client:: Ошибка удаления из client_pult \n{client}\n'
+                      f'{sql_str}\n'
+                      f'{str(e)}\n'
+                      f'{sys.exc_info()[2].tb_frame.f_code}')
+
+        sql_str = str(
+                f"delete from filters "
+                f"where client_id = {client}"
+                )
+        try:
+            log.debug(f"delete_client: удаление из таблицы filters")
+            self.cur.execute(sql_str)
+        except Exception as e:
+            result = False
+            self.con.rollback()
+            log.error(f'delete_client:: Ошибка удаления из filters \n{client}\n'
+                      f'{sql_str}\n'
+                      f'{str(e)}\n'
+                      f'{sys.exc_info()[2].tb_frame.f_code}')
+        if result:
+            self.con.commit()
+        return result

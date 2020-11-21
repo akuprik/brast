@@ -50,6 +50,11 @@ def h_clients(message):
     msg = bot.handler_clients(message)
     bot.send_message(message.chat.id, msg)
 
+@bot.message_handler(commands=['delclient'])
+def h_clients(message):
+    msg = bot.handler_delclient(message)
+    bot.send_message(message.chat.id, msg)
+
 
 @bot.message_handler(commands=['valid', 'unvalid'])
 def h_set_valid(message):
@@ -77,6 +82,7 @@ def h_filter(message):
 @bot.message_handler(commands=['details',
                                'filters',
                                'registrations',
+                               'filters'
                                ])
 def h_details_all(message):
     msg = bot.handler_details(message)

@@ -10,11 +10,11 @@ from ckts_api import test_pult_in_cks
 from b_client import Filter
 
 POLLING_INTERVAL = 1
-LOG_LEVEL = logs.WARNING
+LOG_LEVEL = logs.DEBUG
 
 TEMPLATE_PULT = '(TLG\d{3})'
 TEMPLATE_ID = '(\d*)'
-TEMPLATE_VALID = '/(VALID|UNVALID) (\d*)'
+TEMPLATE_VALID = '/(VALID|UNVALID|DELCLIENT) (\d*)'
 TEMPLATE_FILTER = '/FILTER A:(\w*) T:(.*)'
 TEMPLATE_UNFILTER = '/UNFILTER (\d*)'
 TEMPLATE_COMMAND ='/(\w*)'
@@ -26,8 +26,13 @@ log = logs.Logger(log_name='b_telega', log_level=LOG_LEVEL)
 class TBot(TeleBot):
     def send_message(self, chat_id, text, disable_web_page_preview=None,
                      reply_to_message_id=None, reply_markup=None,
-                     parse_mode=None, disable_notification=None, timeout=None):
-        log.debug(text)
+                     parse_mode=None, disable_notification=None, timeout=None,
+                     confirm_client=True,
+                     ):
+        log.debug(f'send_messsage: {text}')
+        if confirm_client:
+            db = CktsBotDB()
+            db.confirm_client(chat_id)
         try:
             return super().send_message(
                 chat_id, text, disable_web_page_preview,
@@ -62,7 +67,7 @@ class TBot(TeleBot):
     def handler_start(self, message):
         msg = f'Привет {message.chat.first_name} ' \
               f'{message.chat.last_name}, запустились!\n' \
-              f'Попробуй /help'
+              f'Это система БРАСТ. Попробуй /help'
         return msg
 
     def handler_help(self, message):
@@ -116,8 +121,8 @@ class TBot(TeleBot):
                     f"pult = {client_pult.str_for_client()}\n"
                     )
         except Exception as e:
-            log.warning(f"Ошибка при регмстрации пульта\n"
-                        f"{str(e)}"
+            log.warning(f"Ошибка при регистрации пульта\n"
+                        f"{str(e)}\n"
                         f"{message.json}")
             return 'Ошибка при регистрации'
 
@@ -193,6 +198,29 @@ class TBot(TeleBot):
                             )
             return lst if lst != '' else 'Список клиентов пуст'
         return "Нет доступа"
+
+    def handler_delclient(self, message):
+        if self.is_admin(message.chat.id):
+            cmd, client_id = '', ''
+            try:
+                cmd, client_id = re.findall(TEMPLATE_VALID,
+                                         message.text.upper(),
+                                         )[0]
+            except Exception as e:
+                log.info(f"handler_del_client: ошибка команды {message.text}\n"
+                         f" {str(e)}")
+
+            if not (cmd != '' and client_id != ''):
+                return (f'Ошибка формата\n'
+                        f'{help_list.get("admin_commands")}'
+                        )
+            db = CktsBotDB()
+            if db.delete_client(client_id):
+                return f"Клиент client_id:{client_id} УДАЛЕН"
+            return f'Ошибка удаления клиента client_id:{client_id}'
+        else:
+            return "Нет доступа"
+
 
     def handler_set_valid(self, message):
         """
@@ -276,12 +304,14 @@ class TBot(TeleBot):
         if filter_id != '':
             db = CktsBotDB()
             filter = db.get_filter_by_id(filter_id)
+            client = db.get_telega_client(message.chat.id)
             if filter:
-                db.delete_filter(filter)
-                return str(
-                    f"Удален фильтр:\n{filter}\n"
-                    f"Для просмотра списка фильтров /filterlist"
-                )
+                if filter.client_id == client.client_id:
+                    db.delete_filter(filter)
+                    return str(
+                        f"Удален фильтр:\n{filter}\n"
+                        f"Для просмотра списка фильтров /filterlist"
+                    )
         return 'Не верный ID'
 
     def handler_details(self, message):
