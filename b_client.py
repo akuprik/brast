@@ -23,12 +23,14 @@ class TelegaClient:
 
 
 class ClientPult:
-    def __init__(self, id, client_id, pult, valid, telega_id=None):
+    def __init__(self, id, client_id, pult, valid,
+                 telega_id=None, pult_decription=''):
         self.id = id if id else 0
         self.client_id = client_id
         self.pult = pult
         self.valid = valid
         self.telega_id = telega_id
+        self.pult_description = pult_decription
 
     def valid_str(self):
         if self.valid != 0:
@@ -39,7 +41,7 @@ class ClientPult:
         return f'{self.pult} {self.valid_str()}'
 
     def str_for_admin(self):
-        return (f'{self.pult} {self.valid_str()} '
+        return (f'{self.pult}/{self.pult_description}/{self.valid_str()} '
                 )
 
     def __str__(self):

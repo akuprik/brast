@@ -7,7 +7,7 @@ import logs
 from MyRecordSet import MyRecordSet
 import b_client
 
-log_level = logs.DEBUG
+log_level = logs.WARNING
 
 log = logs.Logger(log_name='b_db', log_level=log_level)
 
@@ -158,14 +158,26 @@ class CktsBotDB:
     def get_regs_not_valid(self):
         reg_list = []
         self.cur.execute(f"select id, client_id, pult, "
-                         f"valid, telega_id  "
+                         f"valid, telega_id, pult_descr  "
                          f"from v_client_pult "
                          f"where valid = 0")
         ms = MyRecordSet(self.cur.fetchall(), self.cur.description)
         for row in ms._rows:
             reg_list += [b_client.ClientPult(row[0], row[1], row[2],
-                                                row[3], row[4])]
+                                                row[3], row[4], row[5])]
         return reg_list
+
+    def get_regs_all(self):
+        reg_list = []
+        self.cur.execute(f"select id, client_id, pult, "
+                         f"valid, telega_id, pult_descr  "
+                         f"from v_client_pult ")
+        ms = MyRecordSet(self.cur.fetchall(), self.cur.description)
+        for row in ms._rows:
+            reg_list += [b_client.ClientPult(row[0], row[1], row[2],
+                                                row[3], row[4], row[5])]
+        return reg_list
+
 
     def client_is_admin(self, telega_id):
         client = self.get_telega_client(telega_id)
@@ -382,15 +394,15 @@ class CktsBotDB:
                       f'{str(e)}\n'
                       f'{sys.exc_info()[2].tb_frame.f_code}')
 
-    def delete_client(self, client):
+    def delete_client(self, client_id):
         """
         удаляет из БД клиента, его регистрации и фильтры
         """
         result = True
-        log.warning(f"delete_client: {client}")
+        log.warning(f"delete_client: {client_id}")
         sql_str = str(
                 f"delete from clients "
-                f"where id_client = {client}"
+                f"where id_client = {client_id}"
                 )
         try:
             log.debug(f"delete_client: удаление из таблицы clients")
@@ -398,14 +410,14 @@ class CktsBotDB:
         except Exception as e:
             self.con.rollback()
             result = False
-            log.error(f'delete_client:: Ошибка удаления из clients \n{client}\n'
+            log.error(f'delete_client:Ошибка удаления из clients\n{client_id}\n'
                       f'{sql_str}\n'
                       f'{str(e)}\n'
                       f'{sys.exc_info()[2].tb_frame.f_code}')
 
         sql_str = str(
                 f"delete from client_pult "
-                f"where client_id = {client}"
+                f"where client_id = {client_id}"
                 )
         try:
             log.debug(f"delete_client: удаление из таблицы client_pult")
@@ -413,14 +425,15 @@ class CktsBotDB:
         except Exception as e:
             result = False
             self.con.rollback()
-            log.error(f'delete_client:: Ошибка удаления из client_pult \n{client}\n'
+            log.error(f'delete_client: Ошибка удаления '
+                      f'из client_pult \n{client_id}\n'
                       f'{sql_str}\n'
                       f'{str(e)}\n'
                       f'{sys.exc_info()[2].tb_frame.f_code}')
 
         sql_str = str(
                 f"delete from filters "
-                f"where client_id = {client}"
+                f"where client_id = {client_id}"
                 )
         try:
             log.debug(f"delete_client: удаление из таблицы filters")
@@ -428,10 +441,68 @@ class CktsBotDB:
         except Exception as e:
             result = False
             self.con.rollback()
-            log.error(f'delete_client:: Ошибка удаления из filters \n{client}\n'
+            log.error(f'delete_client:Ошибка удаления из filters n{client_id}\n'
                       f'{sql_str}\n'
                       f'{str(e)}\n'
                       f'{sys.exc_info()[2].tb_frame.f_code}')
         if result:
             self.con.commit()
         return result
+
+    def get_clients_for_inform(self, days):
+        """
+        возвращает список клиентов для отправки информации о подтверждении
+        подписки. lastdate старше days дней, sent_inform = 0
+        """
+        clients = []
+        sql_str = str(f"select * from v_clients "
+                      f"where lastdate < "
+                      f"'{datetime.date.today()-datetime.timedelta(days=days)}'"
+                      f" and client_type not in (1) "
+                      f" and sent_inform = 0"
+                      )
+        log.debug(f"get_clients_for_inform: {sql_str}")
+        self.cur.execute(sql_str)
+        ms = MyRecordSet(self.cur.fetchall(), self.cur.description)
+        if len(ms._rows) > 0:
+             for row in ms._rows:
+                clients += [
+                    b_client.TelegaClient(
+                        row[0],
+                        row[1],
+                        row[2],
+                        row[3],
+                        row[4],
+                        row[5],
+                    )
+                    ]
+        return clients
+
+    def set_sent_confirm(self, client):
+        sql_str = str(f"update clients "
+                      f"set sent_inform = 1 "
+                      f"where id_client = {client.client_id}"
+                      )
+        log.debug(f"set_sent_confirm: {sql_str}")
+        try:
+            self.cur.execute(sql_str)
+            self.con.commit()
+        except Exception as e:
+            log.error(f"set_sent_confirm: \n"
+                      f"{sql_str}\n"
+                      f'{str(e)}\n'
+                      f'{sys.exc_info()[2].tb_frame.f_code}')
+
+    def get_client_by_id(self, client_id):
+        self.cur.execute(f"select * from v_clients "
+                         f"where id_client = '{client_id}'")
+        ms = MyRecordSet(self.cur.fetchall(), self.cur.description)
+        if len(ms._rows) > 0:
+            return b_client.TelegaClient(ms._rows[0][0],
+                                         ms._rows[0][1],
+                                         ms._rows[0][2],
+                                         ms._rows[0][3],
+                                         ms._rows[0][4],
+                                         ms._rows[0][5],
+                                         )
+        return None

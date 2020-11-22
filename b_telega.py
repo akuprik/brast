@@ -10,7 +10,7 @@ from ckts_api import test_pult_in_cks
 from b_client import Filter
 
 POLLING_INTERVAL = 1
-LOG_LEVEL = logs.DEBUG
+LOG_LEVEL = logs.WARNING
 
 TEMPLATE_PULT = '(TLG\d{3})'
 TEMPLATE_ID = '(\d*)'
@@ -18,7 +18,7 @@ TEMPLATE_VALID = '/(VALID|UNVALID|DELCLIENT) (\d*)'
 TEMPLATE_FILTER = '/FILTER A:(\w*) T:(.*)'
 TEMPLATE_UNFILTER = '/UNFILTER (\d*)'
 TEMPLATE_COMMAND ='/(\w*)'
-
+TEMPLATE_SND = '/snd c:(\d*) t:(.*)'
 
 log = logs.Logger(log_name='b_telega', log_level=LOG_LEVEL)
 
@@ -163,7 +163,7 @@ class TBot(TeleBot):
 
     def handler_unreglist(self, message):
         """
-        Формирует список незарегистрированных регистраций
+        Формирует список не подтвержденных регистраций
         для администратора
         """
         lst = ''
@@ -173,7 +173,7 @@ class TBot(TeleBot):
             for reg in unreg_list:
                 s = (f'{reg.id}/'
                      f'{self.get_fio_from_telega_chat(reg.telega_id)}/'
-                     f'{reg.pult}\n'
+                     f'{reg.str_for_admin()} \n'
                      )
                 if lst == '':
                     lst = s
@@ -181,6 +181,28 @@ class TBot(TeleBot):
                     lst += s
             return lst if lst != '' else 'пусто\n'
         return 'Нет доступа'
+
+    def handler_reglistall(self, message):
+        """
+        Формирует список всех регистраций
+        для администратора
+        """
+        lst = ''
+        if self.is_admin(message.chat.id):
+            db = CktsBotDB()
+            unreg_list = db.get_regs_all ()
+            for reg in unreg_list:
+                s = (f'{reg.id}/'
+                     f'{self.get_fio_from_telega_chat(reg.telega_id)}/'
+                     f'{reg.str_for_admin()} \n'
+                     )
+                if lst == '':
+                    lst = s
+                else:
+                    lst += s
+            return lst if lst != '' else 'пусто\n'
+        return 'Нет доступа'
+
 
     def handler_clients(self, message):
         """
@@ -221,7 +243,6 @@ class TBot(TeleBot):
         else:
             return "Нет доступа"
 
-
     def handler_set_valid(self, message):
         """
         Подтверждает/отменяет регистрацию
@@ -245,6 +266,13 @@ class TBot(TeleBot):
                     f'{reg.str_for_client()}'
                     ) if reg else 'Ошибка регистрации'
         return 'Нет доступа'
+
+    def handler_valid(self, message):
+        return self.handler_set_valid(message)
+
+    def handler_unvalid(self, message):
+        return self.handler_set_valid(message)
+
 
     def handler_filterlist(self, message):
         """
@@ -324,3 +352,22 @@ class TBot(TeleBot):
             msg = 'Информация пока не подготовлена'
             log.warning(f"handler_details: файл не найден {file}")
         return msg
+
+    def handler_snd(self, message):
+        try:
+            client_id, text = re.findall(TEMPLATE_SND,
+                                         message.text,
+                                        )[0]
+        except Exception as e:
+            log.info(f"handler_snd: Неверный формат\n"
+                     f"{str(e)}\n"
+                     f"{message.json}")
+            return 'Неверно указаны параметры'
+
+        db = CktsBotDB()
+        client = db.get_client_by_id(client_id)
+        if client:
+            self.send_message(client.telega_id, f"ОТ АДМИНА:\n{text}",
+                              confirm_client=False)
+            return f"Отправлено {client.telega_id}"
+        return f"Клиент {client_id} не найден."
