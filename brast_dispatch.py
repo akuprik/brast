@@ -92,6 +92,6 @@ if __name__ == '__main__':
         if x.find('brast_dispatch.py') > 0:
             if int(x.split()[0]) != int(os.getpid()):
                 isDone = True
-                log.error('brast_dispatch.py уже запущен ранее')
+                log.info('brast_dispatch.py уже запущен ранее')
     if not isDone:
         main()
