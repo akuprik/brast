@@ -16,7 +16,7 @@ bot = b_telega.TBot(TELEGA_TOKEN)
                                'reg', 'unreg', 'reglist',
                                'unreglist', 'clients', 'delclient',
                                'reglistall', 'valid', 'unvalid',
-                               'snd',
+                               'snd', 'fltall', 'client',
                                'filter', 'unfilter', 'filterlist',
                                ])
 def h_command(message):

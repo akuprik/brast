@@ -14,7 +14,7 @@ LOG_LEVEL = logs.WARNING
 
 TEMPLATE_PULT = '(TLG\d{3})'
 TEMPLATE_ID = '(\d*)'
-TEMPLATE_VALID = '/(VALID|UNVALID|DELCLIENT) (\d*)'
+TEMPLATE_VALID = '/(VALID|UNVALID|DELCLIENT|CLIENT) (\d*)'
 TEMPLATE_FILTER = '/FILTER A:(\w*) T:(.*)'
 TEMPLATE_UNFILTER = '/UNFILTER (\d*)'
 TEMPLATE_COMMAND ='/(\w*)'
@@ -371,3 +371,56 @@ class TBot(TeleBot):
                               confirm_client=False)
             return f"Отправлено {client.telega_id}"
         return f"Клиент {client_id} не найден."
+
+    def handler_fltall(self, message):
+        """
+        Возвращает для администратора список фильтров для всех клиентов
+        """
+        if self.is_admin(message.chat.id):
+            filters = ''
+            db = CktsBotDB()
+            filter_list = db.get_filters_for_client()
+            for filter in filter_list:
+                filters += f'{filter}\n'
+            return (filters
+                    if filters != ''
+                    else 'Список пуст')
+        else:
+            return "Нет доступа"
+
+    def handler_client(self, message):
+        """
+        Возвращает данные по клиенту
+        """
+        if self.is_admin(message.chat.id):
+            cmd, client_id = ('', '')
+            try:
+                cmd, client_id = re.findall(TEMPLATE_VALID, message.text.upper())[
+                    0]
+            except Exception as e:
+                log.info(f"handler_client: {str(e)} "
+                         f"Не верный формат команды. {message.text}")
+
+            if not (cmd != '' and client_id != ''):
+                return (f'Ошибка формата\n'
+                        f'{help_list.get("admin_commands")}'
+                        )
+            db = CktsBotDB()
+            client = db.get_client_by_id(client_id)
+            if client is None:
+                return f"client_id = {client_id} не найден"
+            msg = (f'{self.get_fio_from_telega_chat(client.telega_id)}'
+                   f' {client}\n'
+                   )
+            regs = db.get_register_list(client)
+            msg += 'Регистрации:\n'
+            for reg in regs:
+                msg += f"{reg.str_for_admin()}\n"
+            filters = db.get_filters_for_client(client.client_id)
+            msg += "Фильтры:\n"
+            for filter in filters:
+                msg += f'{filter}\n'
+
+            return msg
+        else:
+            return "Нет доступа"

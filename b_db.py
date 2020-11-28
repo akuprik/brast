@@ -346,9 +346,11 @@ class CktsBotDB:
             filter_obj = None
         return filter_obj
 
-    def get_filters_for_client(self, client_id):
+    def get_filters_for_client(self, client_id=None):
         filter_list = []
-        self.cur.execute(f"select * from filters where client_id = {client_id}")
+        self.cur.execute(f"select * from filters "
+                         f"where client_id = "
+                         f"{client_id if client_id is not None else 'client_id'}")
         ms = MyRecordSet(self.cur.fetchall(), self.cur.description)
         if len(ms._rows) > 0:  # с таким client_id есть
             for row in ms._rows:
