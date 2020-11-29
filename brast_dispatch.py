@@ -86,7 +86,7 @@ def main():
 
 
 if __name__ == '__main__':
-    t = os.popen('ps  -C "python" -o pid,command').read().split('\n')
+    t = os.popen('ps  -C "python3" -o pid,command').read().split('\n')
     isDone = False
     for x in t:
         if x.find('brast_dispatch.py') > 0:

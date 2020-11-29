@@ -508,3 +508,21 @@ class CktsBotDB:
                                          ms._rows[0][5],
                                          )
         return None
+
+    def set_role(self, client_id, role_id):
+        result = False
+        sql_str = str(f"update clients "
+                      f"set client_type = {role_id} "
+                      f"where id_client = {client_id}"
+                      )
+        log.debug(f"set_set_role: {sql_str}")
+        try:
+            self.cur.execute(sql_str)
+            self.con.commit()
+            result = True
+        except Exception as e:
+            log.error(f"set_set_role: \n"
+                      f"{sql_str}\n"
+                      f'{str(e)}\n'
+                      f'{sys.exc_info()[2].tb_frame.f_code}')
+        return result

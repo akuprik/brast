@@ -10,7 +10,7 @@ from ckts_api import test_pult_in_cks
 from b_client import Filter
 
 POLLING_INTERVAL = 1
-LOG_LEVEL = logs.WARNING
+LOG_LEVEL = logs.DEBUG
 
 TEMPLATE_PULT = '(TLG\d{3})'
 TEMPLATE_ID = '(\d*)'
@@ -19,6 +19,7 @@ TEMPLATE_FILTER = '/FILTER A:(\w*) T:(.*)'
 TEMPLATE_UNFILTER = '/UNFILTER (\d*)'
 TEMPLATE_COMMAND ='/(\w*)'
 TEMPLATE_SND = '/snd c:(\d*) t:(.*)'
+TEMPLATE_ROLE = '/ROLE C:(\d*) R:(\d*)'
 
 log = logs.Logger(log_name='b_telega', log_level=LOG_LEVEL)
 
@@ -421,6 +422,35 @@ class TBot(TeleBot):
             for filter in filters:
                 msg += f'{filter}\n'
 
+            return msg
+        else:
+            return "Нет доступа"
+
+    def handler_role(self, message):
+        """
+        изменяет роль клиенту клиенту
+        """
+        if self.is_admin(message.chat.id):
+            client_id, role = ('', '')
+            try:
+                client_id, role = re.findall(TEMPLATE_ROLE,
+                                             message.text.upper())[0]
+            except Exception as e:
+                log.info(f"handler_client: {str(e)} "
+                         f"Не верный формат команды. {message.text}")
+
+            if not (str(client_id) != '' and str(role) != ''):
+                return (f'Ошибка формата\n'
+                        f'{help_list.get("admin_commands")}'
+                        )
+            db = CktsBotDB()
+            client = db.get_client_by_id(client_id)
+            if client is None:
+                return f"client_id = {client_id} не найден"
+            if role not in ['1', '2']:
+                return f"Роль должна быть {[1, 2]}"
+            msg = f"Установили роль {role}" if db.set_role(client_id,
+                                                           role) else f"Ошибка"
             return msg
         else:
             return "Нет доступа"

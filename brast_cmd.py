@@ -11,14 +11,22 @@ log = logs.Logger(log_level=logs.DEBUG)
 
 bot = b_telega.TBot(TELEGA_TOKEN)
 
+COMMANDS = ['start', 'help',
+            'reg', 'unreg', 'reglist',
+            'unreglist', 'clients', 'delclient',
+            'reglistall', 'valid', 'unvalid',
+            'snd', 'fltall', 'client', 'role',
+            'filter', 'unfilter', 'filterlist',
+            ]
 
-@bot.message_handler(commands=['start', 'help',
-                               'reg', 'unreg', 'reglist',
-                               'unreglist', 'clients', 'delclient',
-                               'reglistall', 'valid', 'unvalid',
-                               'snd', 'fltall', 'client',
-                               'filter', 'unfilter', 'filterlist',
-                               ])
+FILE_COMMANDS = ['details',
+                 'filters',
+                 'registrations',
+                 'filters',
+                 ]
+
+@bot.edited_message_handler(commands=COMMANDS)
+@bot.message_handler(commands=COMMANDS)
 def h_command(message):
     try:
         cmd = re.findall('/(\w*)', message.text.lower())[0]
@@ -30,15 +38,14 @@ def h_command(message):
     bot.send_message(message.chat.id, msg)
 
 
-@bot.message_handler(commands=['details',
-                               'filters',
-                               'registrations',
-                               'filters'
-                               ])
+@bot.edited_message_handler(commands=FILE_COMMANDS)
+@bot.message_handler(commands=FILE_COMMANDS)
 def h_details_all(message):
     msg = bot.handler_details(message)
     bot.send_message(message.chat.id, msg)
 
+
+@bot.edited_message_handler()
 @bot.message_handler()
 def h_all(message):
     #pprint(message.json)
@@ -54,7 +61,7 @@ def main():
 
 
 if __name__ == '__main__':
-    t = os.popen('ps  -C "python" -o pid,command').read().split('\n')
+    t = os.popen('ps  -C "python3" -o pid,command').read().split('\n')
     isDone = False
     for x in t:
         if x.find('brast_cmd.py') > 0:
