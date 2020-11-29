@@ -97,7 +97,7 @@ class TBot(TeleBot):
             return msg
         try:
             pult_decription = test_pult_in_cks(pult)
-            if len(pult) == 0:
+            if len(pult_decription) == 0:
                 return f"Пульт {pult} в ЦКС не описан."
             db = CktsBotDB()
             client = db.get_create_client(message.chat.id)  # получим клиента
