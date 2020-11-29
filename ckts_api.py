@@ -3,9 +3,11 @@ from requests import request
 
 from b_constants import API_PATH
 from b_db import CktsBotDB
-from logs import Logger
+from logs import Logger, DEBUG, WARNING, INFO, ERROR
 
-log = Logger(log_name='ckts_api')
+log_level = DEBUG
+
+log = Logger(log_name='ckts_api', log_level=log_level)
 
 def get_pult(pult):
     """
@@ -49,6 +51,7 @@ def get_tlgs(telegaid, telegafio, pults: list, filters: list):
                      headers=headers, data=data)
 
     if result.status_code == 200:
+        log.debug(f"get_tlgs: data={data}\nresponse={result.json()}")
         return result.json()
 
     log.warning(f'gettlg.asp: status_code={result.status_code} data={data}')

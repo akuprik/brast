@@ -18,6 +18,7 @@ log_level = logs.WARNING
 
 log = logs.Logger(log_level=log_level)
 
+
 def dispatch_tlg(db, bot):
     """
     Рассылка АФТН сообщений и удаление клиента если просрочена активность
